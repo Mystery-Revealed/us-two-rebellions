@@ -63,15 +63,23 @@ export default function MatchView({ state, dispatch }) {
   // "PRESIDENT OF THE UNITED STATES" while the 1787 interlude card is still
   // asking the student to sit through the handoff. Freeze it at Round 1's
   // last phase until the interlude is actually dismissed.
+  // Beyond the round boundary (handled below via pendingEventCard), the SAME
+  // batching means eventCard/turn race ahead at every phase's last decision
+  // too — pin the header to the last phase seen before feedback started so
+  // it doesn't jump a beat early.
+  const settledChapterRef = useRef(null);
+  if (!feedback) settledChapterRef.current = eventCard?.chapter || turn?.chapter || settledChapterRef.current;
+  const settledChapter = feedback ? (settledChapterRef.current || eventCard?.chapter || turn?.chapter) : (eventCard?.chapter || turn?.chapter);
+
   const chapterIdx = pendingEventCard
     ? ROUND2_STARTS_AT - 1
-    : (eventCard?.chapter?.index ?? turn?.chapter?.index ?? 0);
+    : (settledChapter?.index ?? 0);
   const round = chapterIdx < ROUND2_STARTS_AT ? 1 : 2;
   const phaseInRound = (chapterIdx % ROUND2_STARTS_AT) + 1;
   const desk = meta.desks?.[round - 1] || '';
   // No chip during the interlude — its own "1787 · Philadelphia" kicker is
   // the label; the real Round 2 phase info reveals once it's dismissed.
-  const phase = pendingEventCard ? null : (eventCard?.chapter || turn?.chapter);
+  const phase = pendingEventCard ? null : settledChapter;
 
   const lowMeter = Object.entries(match.meters || {}).find(([, v]) => v <= 15);
 
